@@ -39,9 +39,7 @@ class AgcSlave:
         self.dv_p_theory = iter(ts_p_theory)
 
     def real_output(self, d_p_ref):
-        ret = np.min([d_p_ref, self.dv_p_theory.__next__()])
-
-        return
+        return = np.min([d_p_ref, self.dv_p_theory.__next__()])
 
 
 def flat(nested):
