@@ -97,13 +97,15 @@ class AgcMaster:
         self.dic_catchup_rec = dict()
         self.dic_distmode_rec = dict()
         for key in agc_obj_dict:
-            self.dic_p_ref_rec[key] = list()
+            self.dic_p_ref_rec[key] = list([0])
             self.dic_p_real_rec[key] = list()
             self.dic_catchup_rec[key] = list()
             self.dic_distmode_rec[key] = list()
 
     def cycle_ss(self):
-        for key in self.
+        for idx in 
+        for key in self.AgcObjDict:
+            self.dic_p_real_rec[key].append(self.AgcObjDict[key].real_out( ))
         tmp_p_real1 = slave1.real_output(tmp_p_ref_next1)
         tmp_p_real2 = slave2.real_output(tmp_p_ref_next2)
         tmp_catch_up = f_agc_catch_up_verify(np.array([tmp_p_ref_next1, tmp_p_ref_next2]),
