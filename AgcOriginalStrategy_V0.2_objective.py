@@ -15,8 +15,6 @@ def ScadaFileRead(argFileName, argInDir):
     return ScadaFile
 
 
-
-
 AgcDir = 'D:/PJ/Python/JupyterNB/WindPowerAGC/AgcMergedScada/2017/'
 # ScadaDir = 'D:/PJ/Python/JupyterNB/WindPowerAGC/ScadaSeperated/2016/'
 ScadaDir = ''
@@ -41,167 +39,159 @@ Class def zone
 '''
 class AgcSlave:
     def __init__(self, ts_p_theory, capacity):
-        self.dv_p_theory = iter(ts_p_theory)
+        self.dv_p_theory = ts_p_theory
         self.d_capacity = capacity
         self.d_p_delta = 0.2 * self.d_capacity
+        self.d_real_out = 0
+        self.d_upbility = 0  # whether it can generate more power 0:No 1:Yes
 
-    def real_output(self, d_p_ref):
-        return np.min([d_p_ref, self.dv_p_theory.__next__()])
+    def RealOutput(self, d_p_ref, t_step):
+        self.d_real_out = np.min([d_p_ref, self.dv_p_theory[t_step]])
+        return self.d_real_out
 
-# def flat(nested):
-#     for item in nested:
-#         yield item
 
-# def f_site_real_output(dv_p_ref, dv_p_theory):
-#     return np.min([dv_p_ref, dv_p_theory], axis=0)
-#
-#
-# def f_agc_dist_ref(d_p_limit, dv_p_real, dv_p_delta, bv_up_ability, dv_p_real_free):
-#     # case1: < 90% channel limit? then add 10% upward margin
-#     if np.sum(dv_p_real) + np.sum(dv_p_real_free) < 0.9 * d_p_limit:
-#         dv_p_real_next = dv_p_real + dv_p_delta * bv_up_ability
-#         mode = 1
-#     # case2: > 90% but < limit? then DO NOT add 10%! simply use previous real output
-#     elif np.sum(dv_p_real) + np.sum(dv_p_real_free) < d_p_limit:
-#         dv_p_real_next = dv_p_real
-#         mode = 2
-#     # case3: over limit
-#     else:
-#         dv_p_real_next = dv_p_real + dv_p_delta * bv_up_ability
-#         dv_p_real_next = dv_p_real_next * (d_p_limit - np.sum(dv_p_real_free)) / np.sum(dv_p_real_next)
-#         mode = 3
-#     return dv_p_real_next, mode
+class FreeSlave:
+    def __init__(self, ts_p_theory, capacity, limit):
+        self.dv_p_theory = ts_p_theory
+        self.d_capacity = capacity
+        self.d_real_out = 0
+        self.limit = limit
 
-    # # step 1: add upward power margin depends on the sites' status
-    # dv_p_real_next = dv_p_real + dv_p_delta * bv_up_ability
-    # # step 2: refactor dv_p_real_next if sum of p^{real}_{i, t+1} exceed limitation
-    # if np.sum(dv_p_real_next) + np.sum(dv_p_real_free) > d_p_limit:
-    #     dv_p_real_next = dv_p_real_next * (d_p_limit - np.sum(dv_p_real_free)) / np.sum(dv_p_real_next)
-    # return dv_p_real_next
-#
-#
-# def f_agc_catch_up_verify(dv_p_ref, dv_p_real):
-#     # An array will be returned representing whether the site can catch up with the AGC-ref or not
-#     return np.double(np.abs(dv_p_real - dv_p_ref) <= 1.5)  # less than 1.5MW, then it can catch up
+    def RealOutput(self, t_step):
+        self.d_real_out = np.min([self.limit, self.dv_p_theory[t_step]])
+        return self.d_real_out
 
 
 class AgcMaster:
     def __init__(self, p_limit, agc_obj_dict, free_obj_dict):
         self.P_LIMIT = p_limit
+        self.T_SPAN = len(list(agc_obj_dict[list(agc_obj_dict.keys())[0]].dv_p_theory))
         self.AgcSiteAmount = len(agc_obj_dict)
         self.FreeSiteAmount = len(free_obj_dict)
         self.AgcObjDict = agc_obj_dict
         self.FreeObjDict = free_obj_dict
+
         self.dic_p_ref_rec = dict()
         self.dic_p_real_rec = dict()
         self.dic_catchup_rec = dict()
-        self.dic_distmode_rec = dict()
+        self.dic_p_real_free_rec = dict()   # ugly, need change
+        self.dic_distmode_rec = list()  # distribution mode has no means for each sites, only mean to the whole sites
+
         for key in agc_obj_dict:
-            self.dic_p_ref_rec[key] = list([0])
+            self.dic_p_ref_rec[key] = list()
             self.dic_p_real_rec[key] = list()
             self.dic_catchup_rec[key] = list()
-            self.dic_distmode_rec[key] = list()
 
-    def cycle_ss(self):
-        for idx in 
+        for key in free_obj_dic:
+            self.dic_p_real_free_rec[key] = list()
+
+    def CatchUpCheck(self, d_tmp_p_real, d_tmp_p_ref):
+        # A float number will be returned representing whether the site can catch up with the AGC-ref or not
+        return np.double(np.abs(d_tmp_p_real - d_tmp_p_ref) <= 1.5)  # less than 1.5MW, then it can catch up
+
+    def DictSumUp(self, input_dict):
+        ret = np.double(0)
+        for key in input_dict:
+            ret += input_dict[key]
+        return ret
+
+    def AgcRealOutSumUp(self):
+        ret = np.double(0)
         for key in self.AgcObjDict:
-            self.dic_p_real_rec[key].append(self.AgcObjDict[key].real_out( ))
-        tmp_p_real1 = slave1.real_output(tmp_p_ref_next1)
-        tmp_p_real2 = slave2.real_output(tmp_p_ref_next2)
-        tmp_catch_up = f_agc_catch_up_verify(np.array([tmp_p_ref_next1, tmp_p_ref_next2]),
-                                             np.array([tmp_p_real1, tmp_p_real2]))  # this func could
-        tmp_p_ref, mode = f_agc_dist_ref(P_LIMIT, np.array([tmp_p_real1, tmp_p_real2]),
-                                         np.array([slave1.d_p_delta, slave2.d_p_delta]),
-                                         tmp_catch_up, ts_3[idx])
-        tmp_p_ref_next1 = tmp_p_ref[0]
-        tmp_p_ref_next2 = tmp_p_ref[1]
-        p_ref1.append(tmp_p_ref_next1)
-        p_ref2.append(tmp_p_ref_next2)
-        p_real1.append(tmp_p_real1)
-        p_real2.append(tmp_p_real2)
-        dist_mode.append(mode)
-        catch_up1.append(tmp_catch_up[0])
-        catch_up2.append(tmp_catch_up[1])
+            ret += self.AgcObjDict[key].d_real_out
+        return ret
 
-    def catchup_check(self, dv_p_ref, dv_p_real):
-        # An array will be returned representing whether the site can catch up with the AGC-ref or not
-        return np.double(np.abs(dv_p_real - dv_p_ref) <= 1.5)  # less than 1.5MW, then it can catch up
+    def FreeRealOutSumUp(self):
+        ret = np.double(0)
+        for key in self.FreeObjDict:
+            ret += self.FreeObjDict[key].d_real_out
+        return ret
 
-    def dist_ref(self,  dv_p_real, dv_p_delta, bv_up_ability, dv_p_real_free):
-        # case1: < 90% channel limit? then add 10% upward margin
-        if np.sum(dv_p_real) + np.sum(dv_p_real_free) < 0.9 * self.P_LIMIT:
-            dv_p_real_next = dv_p_real + dv_p_delta * bv_up_ability
+    def DistributeRef(self):
+        dic_tmp_p_ref = dict()
+        # Step1: Add upward margin or not
+        #   case1: < 90% channel limit? then add 10% upward margin
+        if self.AgcRealOutSumUp() + self.FreeRealOutSumUp() < 0.9 * self.P_LIMIT:
             mode = 1
-        # case2: > 90% but < limit? then DO NOT add 10%! simply use previous real output
-        elif np.sum(dv_p_real) + np.sum(dv_p_real_free) < self.P_LIMIT:
-            dv_p_real_next = dv_p_real
-            mode = 2
-        # case3: over limit
+            self.dic_distmode_rec.append(mode)
+            for key in self.AgcObjDict:
+                dic_tmp_p_ref[key] = self.AgcObjDict[key].d_real_out + \
+                                          self.AgcObjDict[key].d_p_delta * self.AgcObjDict[key].d_upbility
+        #   case2: between [90% +inf] channel limit ? then p_ref_{t+1} = p_real_{t}
         else:
-            dv_p_real_next = dv_p_real + dv_p_delta * bv_up_ability
-            dv_p_real_next = dv_p_real_next * (self.P_LIMIT - np.sum(dv_p_real_free)) / np.sum(dv_p_real_next)
-            mode = 3
-        return dv_p_real_next, mode
+            mode = 5
+            self.dic_distmode_rec.append(mode)
+            for key in self.AgcObjDict:
+                dic_tmp_p_ref[key] = self.AgcObjDict[key].d_real_out
 
+        # Step2: Refactor distribution reference if the sum exceed limit
+        # After p_ref distribution, if the p_ref_{t+1} + p_free_out_{t} exceed P_LIMIT? then refactor it
+        tmp_ref_sum = self.DictSumUp(dic_tmp_p_ref)
+        if tmp_ref_sum + self.FreeRealOutSumUp() > self.P_LIMIT:
+            mode = mode + 10
+            self.dic_distmode_rec.append(mode)
+            for key in self.AgcObjDict:
+                dic_tmp_p_ref[key] = dic_tmp_p_ref[key] * (self.P_LIMIT - self.FreeRealOutSumUp()) / tmp_ref_sum
+        else:
+            pass  # pass intended here
+
+        return dic_tmp_p_ref, mode
+
+    def MainLoop(self):
+        dic_tmp_p_ref = dict()
+        dic_tmp_p_real = dict()
+        dic_tmp_catchup = dict()
+
+        for key in self.AgcObjDict:
+            dic_tmp_p_ref[key] = 0
+            dic_tmp_p_real[key] = 0
+            dic_tmp_catchup[key] = 0
+
+        for idx in range(self.T_SPAN):
+            print(idx)
+            for key in self.AgcObjDict:
+                self.AgcObjDict[key].RealOutput(dic_tmp_p_ref[key], t_step=idx)
+                self.AgcObjDict[key].d_upbility = \
+                    self.CatchUpCheck(self.AgcObjDict[key].d_real_out, dic_tmp_p_ref[key])
+            dic_tmp_p_ref, dic_tmp_distmode = self.DistributeRef()
+
+            for key in self.FreeObjDict:
+                self.FreeObjDict[key].RealOutput(t_step=idx)
+
+            # Recording intermediate datum
+            for key in self.AgcObjDict:
+                self.dic_p_ref_rec[key].append(dic_tmp_p_ref[key])
+                self.dic_p_real_rec[key].append(self.AgcObjDict[key].d_real_out)
+                self.dic_catchup_rec[key].append(dic_tmp_catchup[key])
+
+            for key in self.FreeObjDict:
+                self.dic_p_real_free_rec[key].append(self.FreeObjDict[key].d_real_out)
 
 
 if __name__ == '__main__':
     slave1 = AgcSlave(ts_1, 45)
     slave2 = AgcSlave(ts_2, 76)
-    # AgcMaster(p_limit=100)
+    slave3 = FreeSlave(ts_3, 75, 9999)
 
-    tmp_p_ref_next1 = 0
-    tmp_p_ref_next2 = 0
+    agc_obj_dic = {'agc1': slave1, 'agc2': slave2}
+    free_obj_dic = {'free1': slave3}
+    # agc_obj_dic = {'agc1': slave1}
+    # free_obj_dic = dict()
 
-    p_real1 = list()
-    p_real2 = list()
-    p_ref1 = list()
-    p_ref2 = list()
-    dist_mode = list()
-    catch_up1 = list()
-    catch_up2 = list()
-    for idx in range(len(ts_1)):
-        tmp_p_real1 = slave1.real_output(tmp_p_ref_next1)
-        tmp_p_real2 = slave2.real_output(tmp_p_ref_next2)
-        tmp_catch_up = f_agc_catch_up_verify(np.array([tmp_p_ref_next1, tmp_p_ref_next2]),
-                                             np.array([tmp_p_real1, tmp_p_real2]))  # this func could
-        tmp_p_ref, mode = f_agc_dist_ref(P_LIMIT, np.array([tmp_p_real1, tmp_p_real2]),
-                                                          np.array([slave1.d_p_delta, slave2.d_p_delta]),
-                                                          tmp_catch_up, ts_3[idx])
-        tmp_p_ref_next1 = tmp_p_ref[0]
-        tmp_p_ref_next2 = tmp_p_ref[1]
-        p_ref1.append(tmp_p_ref_next1)
-        p_ref2.append(tmp_p_ref_next2)
-        p_real1.append(tmp_p_real1)
-        p_real2.append(tmp_p_real2)
-        dist_mode.append(mode)
-        catch_up1.append(tmp_catch_up[0])
-        catch_up2.append(tmp_catch_up[1])
+    master = AgcMaster(p_limit=80, agc_obj_dict=agc_obj_dic, free_obj_dict=free_obj_dic)
+    master.MainLoop()
 
-    plt.plot(np.array(ts_1)+np.array(ts_2)+np.array(ts_3), label='theory')
-    plt.plot(ts_1, label='theory1')
-    plt.plot(p_real1, label='real1')
-    plt.plot(p_ref1, 'k.', label='ref1')
-    plt.plot(np.array(dist_mode)*10, 'ro', label='mode')
-    plt.plot(np.array(catch_up1)*15, '*', label='catch1')
-    plt.plot(p_real2, label='real2')
-    plt.plot(p_ref2, 'k.-', label='ref2')
-    plt.plot(ts_3, label='real3')
-
-    plt.plot(np.array(p_real1)+np.array(p_real2)+np.array(ts_3), label='real1+2+3')
+    plt.plot(master.dic_p_ref_rec['agc1'], 'ro', label='agc1-ref')
+    plt.plot(ts_1, label='agc1-theory')
+    plt.plot(master.dic_p_real_rec['agc1'], label='agc1-real')
+    plt.plot(master.dic_p_ref_rec['agc2'], 'co', label='agc2-ref')
+    plt.plot(ts_2, label='agc2-theory')
+    plt.plot(master.dic_p_real_rec['agc2'], label='agc2-real')
+    plt.plot(np.array(master.dic_p_real_rec['agc1']) + np.array(master.dic_p_real_rec['agc2']) +
+             np.array(master.dic_p_real_free_rec['free1']), label='real-sum')
+    plt.plot(master.dic_p_real_free_rec['free1'], '*', label='free1-real')
+    plt.plot(np.array(master.dic_distmode_rec), 'ko', label='distmode')
+    plt.plot([80]*len(ts_1), linewidth=5.0, label='Limit')
     plt.legend()
     plt.show()
-    # P_LIMIT = 30
-    # tmp_p_ref_next = 0
-    # P_DELTA = 20
-    # p_real = list()
-    # for idx in range(len(ts_1)):
-    #     tmp_p_real = f_site_real_output(np.array([tmp_p_ref_next]), np.array(ts_1)[idx])
-    #     tmp_catch_up = f_agc_catch_up_verify(tmp_p_ref_next, tmp_p_real) # this func could have different sample time
-    #     tmp_p_ref_next = f_agc_dist_ref(P_LIMIT, tmp_p_real, P_DELTA, np.array([1]))
-    #     p_real.append(tmp_p_real)
-    #
-    # plt.plot(ts_1, label='theory')
-    # plt.plot(p_real, label='real')
-    # plt.legend()
-    # plt.show()
+
