@@ -177,6 +177,28 @@ class AgcMaster:
                 self.dic_p_real_free_rec[key].append(self.FreeObjDict[key].d_real_out)
 
 
+# File import here
+# Step1: Import file list
+SiteNameFile = pd.read_excel('scada/file_list.xlsx')
+SiteProcessTable = dict()
+for idx in range(len(SiteNameFile)):
+    SiteProcessTable[SiteNameFile.iloc[idx]['Name']] = dict()
+    SiteProcessTable[SiteNameFile.iloc[idx]['Name']]['Capacity'] = SiteNameFile.iloc[idx]['Capacity']
+    SiteProcessTable[SiteNameFile.iloc[idx]['Name']]['Free'] = SiteNameFile.iloc[idx]['Free']
+
+# Step2: Import files ####
+SiteFile = dict()
+for idx, name in enumerate(SiteProcessTable):
+    SiteFile[name] = AgcFileRead(argFileName=name, argInDir=ScadaDir)
+    print('(' + str(idx+1) + '/' + str(len(SiteProcessTable)) + ')' + name)
+
+# Step3: Create time series from file
+SiteTsDict = dict()
+for name in SiteProcessTable:
+    SiteTsDict[name] = SiteFile[name]['出力值'].tolist()  # .loc['2017/1/10 20:00:00':'2017/1/11 03:00:00']['出力值'].tolist()
+
+
+
 if __name__ == '__main__':
     # Step1: Import file list
     SiteNameFile = pd.read_excel('scada/file_list.xlsx')

@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="ef5606ca-4b55-4b79-9d9d-7abcd44716b5" name="Default Changelist" comment="" />
+    <list default="true" id="ef5606ca-4b55-4b79-9d9d-7abcd44716b5" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AgcOriginalStrategy_V0.2_objective.py" beforeDir="false" afterPath="$PROJECT_DIR$/AgcOriginalStrategy_V0.2_objective.py" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -84,6 +87,9 @@
       <module name="AgcStrategy" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
@@ -135,7 +141,7 @@
       <workItem from="1566347946415" duration="21806000" />
       <workItem from="1566437168806" duration="7555000" />
       <workItem from="1566445730677" duration="10911000" />
-      <workItem from="1566525648184" duration="2238000" />
+      <workItem from="1566525648184" duration="12695000" />
     </task>
     <servers />
   </component>
