@@ -1,9 +1,21 @@
 import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+plt.rcParams['font.serif'] = ['SimHei']
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
 import numpy as np
 import time
 import pandas as pd
 import copy as cp
+import os
 
+def AgcFileRead(argFileName, argInDir):
+    AgcFileHand = open(argInDir + argFileName + '.csv')
+    AgcFile = pd.read_csv(AgcFileHand, index_col=0)
+    AgcFile.index = pd.to_datetime(AgcFile.index)
+    AgcFile = AgcFile.resample('min').first()
+    AgcFileHand.close()
+    return AgcFile
 
 def ScadaFileRead(argFileName, argInDir):
     ScadaFileHand = open(argInDir + argFileName + '.csv')
@@ -15,18 +27,18 @@ def ScadaFileRead(argFileName, argInDir):
     return ScadaFile
 
 
-AgcDir = 'D:/PJ/Python/JupyterNB/WindPowerAGC/AgcMergedScada/2017/'
-# ScadaDir = 'D:/PJ/Python/JupyterNB/WindPowerAGC/ScadaSeperated/2016/'
-ScadaDir = ''
+# AgcDir = 'D:/PJ/Python/JupyterNB/WindPowerAGC/AgcMergedScada/2017/'
 
-SiteFileRaw = ScadaFileRead('坝头', ScadaDir)
+ScadaDir = 'scada/'
 
-# ts_free = SiteFileRaw.loc['2016/1/9 04:00:00':'2016/1/9 09:00:00']['出力值'].tolist()
-ts_1 = SiteFileRaw.loc['2016/1/9 04:00:00':'2016/1/9 09:00:00']['出力值'].tolist()
-ts_2 = SiteFileRaw.loc['2016/1/10 04:00:00':'2016/1/10 09:00:00']['出力值'].tolist()
-ts_3 = SiteFileRaw.loc['2016/1/11 04:00:00':'2016/1/11 09:00:00']['出力值'].tolist()
-agc_sites = {'ts1': ts_1, 'ts2': ts_2}
-free_sites = {'ts3': ts_3}
+# SiteFileRaw = AgcFileRead('坝头风电场', ScadaDir)
+
+
+# ts_1 = SiteFileRaw.loc['2016/1/9 04:00:00':'2016/1/9 09:00:00']['出力值'].tolist()
+# ts_2 = SiteFileRaw.loc['2016/1/10 04:00:00':'2016/1/10 09:00:00']['出力值'].tolist()
+# ts_3 = SiteFileRaw.loc['2016/1/11 04:00:00':'2016/1/11 09:00:00']['出力值'].tolist()
+# agc_sites = {'ts1': ts_1, 'ts2': ts_2}
+# free_sites = {'ts3': ts_3}
 '''
 Global var zone
 '''
@@ -113,14 +125,12 @@ class AgcMaster:
         #   case1: < 90% channel limit? then add 10% upward margin
         if self.AgcRealOutSumUp() + self.FreeRealOutSumUp() < 0.9 * self.P_LIMIT:
             mode = 1
-            self.dic_distmode_rec.append(mode)
             for key in self.AgcObjDict:
                 dic_tmp_p_ref[key] = self.AgcObjDict[key].d_real_out + \
                                           self.AgcObjDict[key].d_p_delta * self.AgcObjDict[key].d_upbility
         #   case2: between [90% +inf] channel limit ? then p_ref_{t+1} = p_real_{t}
         else:
             mode = 5
-            self.dic_distmode_rec.append(mode)
             for key in self.AgcObjDict:
                 dic_tmp_p_ref[key] = self.AgcObjDict[key].d_real_out
 
@@ -129,12 +139,11 @@ class AgcMaster:
         tmp_ref_sum = self.DictSumUp(dic_tmp_p_ref)
         if tmp_ref_sum + self.FreeRealOutSumUp() > self.P_LIMIT:
             mode = mode + 10
-            self.dic_distmode_rec.append(mode)
             for key in self.AgcObjDict:
                 dic_tmp_p_ref[key] = dic_tmp_p_ref[key] * (self.P_LIMIT - self.FreeRealOutSumUp()) / tmp_ref_sum
         else:
             pass  # pass intended here
-
+        self.dic_distmode_rec.append(mode)
         return dic_tmp_p_ref, mode
 
     def MainLoop(self):
@@ -145,10 +154,10 @@ class AgcMaster:
         for key in self.AgcObjDict:
             dic_tmp_p_ref[key] = 0
             dic_tmp_p_real[key] = 0
-            dic_tmp_catchup[key] = 0
+            # dic_tmp_catchup[key] = 0
 
         for idx in range(self.T_SPAN):
-            print(idx)
+            print('%8.5f' % (100*(idx+1)/self.T_SPAN))
             for key in self.AgcObjDict:
                 self.AgcObjDict[key].RealOutput(dic_tmp_p_ref[key], t_step=idx)
                 self.AgcObjDict[key].d_upbility = \
@@ -162,36 +171,81 @@ class AgcMaster:
             for key in self.AgcObjDict:
                 self.dic_p_ref_rec[key].append(dic_tmp_p_ref[key])
                 self.dic_p_real_rec[key].append(self.AgcObjDict[key].d_real_out)
-                self.dic_catchup_rec[key].append(dic_tmp_catchup[key])
+                self.dic_catchup_rec[key].append(self.AgcObjDict[key].d_upbility)
 
             for key in self.FreeObjDict:
                 self.dic_p_real_free_rec[key].append(self.FreeObjDict[key].d_real_out)
 
 
 if __name__ == '__main__':
-    slave1 = AgcSlave(ts_1, 45)
-    slave2 = AgcSlave(ts_2, 76)
-    slave3 = FreeSlave(ts_3, 75, 9999)
+    # Step1: Import file list
+    SiteNameFile = pd.read_excel('scada/file_list.xlsx')
+    SiteProcessTable = dict()
+    for idx in range(len(SiteNameFile)):
+        SiteProcessTable[SiteNameFile.iloc[idx]['Name']] = dict()
+        SiteProcessTable[SiteNameFile.iloc[idx]['Name']]['Capacity'] = SiteNameFile.iloc[idx]['Capacity']
+        SiteProcessTable[SiteNameFile.iloc[idx]['Name']]['Free'] = SiteNameFile.iloc[idx]['Free']
 
-    agc_obj_dic = {'agc1': slave1, 'agc2': slave2}
-    free_obj_dic = {'free1': slave3}
-    # agc_obj_dic = {'agc1': slave1}
-    # free_obj_dic = dict()
+    # Step2: Import files ####
+    SiteFile = dict()
+    for idx, name in enumerate(SiteProcessTable):
+        SiteFile[name] = AgcFileRead(argFileName=name, argInDir=ScadaDir)
+        print('(' + str(idx+1) + '/' + str(len(SiteProcessTable)) + ')' + name)
 
-    master = AgcMaster(p_limit=80, agc_obj_dict=agc_obj_dic, free_obj_dict=free_obj_dic)
+    # Step3: Create time series from file
+    SiteTsDict = dict()
+    for name in SiteProcessTable:
+        SiteTsDict[name] = SiteFile[name]['出力值'].tolist()  # .loc['2017/1/10 20:00:00':'2017/1/11 03:00:00']['出力值'].tolist()
+
+    # Step4: Agc object creating
+    AgcList = [key for key in SiteProcessTable if SiteProcessTable[key]['Free'] == 0]
+    agc_obj_dic = dict()
+    for name in AgcList:
+        agc_obj_dic[name] = AgcSlave(ts_p_theory=SiteTsDict[name],
+                                     capacity=SiteProcessTable[name]['Capacity'])
+
+    # Step5: Free object creating
+    FreeList = [key for key in SiteProcessTable if SiteProcessTable[key]['Free'] == 1]
+    free_obj_dic = dict()
+    for name in FreeList:
+        free_obj_dic[name] = FreeSlave(ts_p_theory=SiteTsDict[name],
+                                       capacity=SiteProcessTable[name]['Capacity'],
+                                       limit=SiteProcessTable[name]['Capacity'])
+
+    master = AgcMaster(p_limit=1100, agc_obj_dict=agc_obj_dic, free_obj_dict=free_obj_dic)
     master.MainLoop()
 
-    plt.plot(master.dic_p_ref_rec['agc1'], 'ro', label='agc1-ref')
-    plt.plot(ts_1, label='agc1-theory')
-    plt.plot(master.dic_p_real_rec['agc1'], label='agc1-real')
-    plt.plot(master.dic_p_ref_rec['agc2'], 'co', label='agc2-ref')
-    plt.plot(ts_2, label='agc2-theory')
-    plt.plot(master.dic_p_real_rec['agc2'], label='agc2-real')
-    plt.plot(np.array(master.dic_p_real_rec['agc1']) + np.array(master.dic_p_real_rec['agc2']) +
-             np.array(master.dic_p_real_free_rec['free1']), label='real-sum')
-    plt.plot(master.dic_p_real_free_rec['free1'], '*', label='free1-real')
-    plt.plot(np.array(master.dic_distmode_rec), 'ko', label='distmode')
-    plt.plot([80]*len(ts_1), linewidth=5.0, label='Limit')
+
+    real_sum = np.array(master.DictSumUp(master.dic_p_real_rec)) + np.array(master.DictSumUp(master.dic_p_real_free_rec))
+
+
+    # for key in master.dic_p_real_rec:
+    #     plt.plot(master.dic_p_real_rec[key], label=key)
+
+    # plt.plot(SiteTsDict['坝头风电场'], label='theory坝头风电场')
+    # plt.plot(master.dic_p_real_rec['坝头风电场'], label='real坝头风电场')
+    # plt.plot(master.dic_p_ref_rec['坝头风电场'], label='ref坝头风电场')
+    # plt.plot(master.dic_catchup_rec['坝头风电场'], label='catch坝头风电场')
+    # plt.plot(master.dic_distmode_rec, label='mode')
+    plt.plot(real_sum, label='real_sum')
+    plt.plot([1100.0]*len(real_sum))
     plt.legend()
     plt.show()
+
+
+    # Step5: Save simulation to file
+
+    OutDir = 'D:/Work/新能源工作/[Routine] 未分组工作/20190812-新能源柔直送出极限研究/03-Simulation Result/'
+    for idx, name in enumerate(AgcList):
+        print('Saving simulation result (%i/%i)' % (idx+1, len(AgcList)))  # progress bar
+        ret_dict = dict()
+        ret_dict['theory'] = SiteTsDict[name]
+        ret_dict['real_out'] = master.dic_p_real_rec[name]
+        ret_dict['ref'] = master.dic_p_ref_rec[name]
+        ret_dict['catchup'] = master.dic_catchup_rec[name]
+        ret_dict['distmode'] = master.dic_distmode_rec
+        pd.DataFrame(ret_dict).to_csv(OutDir + name + '.csv')
+        # os.system('pause')
+
+    pd.DataFrame({'RealSum': np.array(real_sum)}).to_csv(OutDir + 'realsum.csv')
 

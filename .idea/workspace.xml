@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="ef5606ca-4b55-4b79-9d9d-7abcd44716b5" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/AgcStrategy.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/AgcStrategy.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/AgcOriginalStrategy_V0.2_objective.py" beforeDir="false" afterPath="$PROJECT_DIR$/AgcOriginalStrategy_V0.2_objective.py" afterDir="false" />
     </list>
@@ -48,7 +46,7 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="settings.editor.selected.configurable" value="reference.settingsdialog.IDE.editor.colors.Console Font" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -137,7 +135,10 @@
       <workItem from="1566282916334" duration="4136000" />
       <workItem from="1566289345359" duration="197000" />
       <workItem from="1566289559233" duration="1907000" />
-      <workItem from="1566347946415" duration="15728000" />
+      <workItem from="1566347946415" duration="21806000" />
+      <workItem from="1566437168806" duration="7555000" />
+      <workItem from="1566445730677" duration="10911000" />
+      <workItem from="1566525648184" duration="2005000" />
     </task>
     <servers />
   </component>
