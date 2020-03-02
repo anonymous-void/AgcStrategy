@@ -1,3 +1,5 @@
+## This file is used for simulating AGC distribution result based on Conservative strategy
+## mainly for Wulinlin's paper, started on 2019/11/25
 import matplotlib.pyplot as plt
 plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
 plt.rcParams['font.serif'] = ['SimHei']
